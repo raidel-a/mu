@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="μ URL - Simple and fast URL shortener" />
+    <meta name="theme-color" content="#059669" />
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@3.8.2/dist/full.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/htmx.org@1.9.6" integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni" crossorigin="anonymous" defer></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    
+    <title>μ URL - Simple URL Shortener</title>
+    
+    <style>
+      /* Base styles */
+      [x-cloak] { display: none !important; }
+      .transition { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* Animations */
+      @keyframes slide-in {
+        0% { opacity: 0; transform: translateY(-10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes success-flash {
+        0%, 100% { border-color: rgb(226 232 240); }
+        50% { border-color: rgb(34 197 94); }
+      }
+
+      @keyframes copy-click {
+        0% { transform: scale(1); background-color: rgb(226 232 240); }
+        50% { transform: scale(0.95); background-color: rgb(16 185 129); }
+        100% { transform: scale(1); background-color: rgb(226 232 240); }
+      }
+
+      @keyframes gooey-slide-in {
+        0% { opacity: 0; transform: translateY(-20px) scale(0.8); }
+        40% { opacity: 0.8; transform: translateY(-15px) scale(1.1); }
+        70% { opacity: 0.9; transform: translateY(-5px) scale(0.95); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      @keyframes checkmark {
+        0% { stroke-dashoffset: 24; }
+        100% { stroke-dashoffset: 0; }
+      }
+
+      /* Components */
+      .success-animation { animation: success-flash 1s ease-out; }
+      .copy-animation { animation: copy-click 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
+      .gooey-wrapper { filter: url("#gooey"); position: relative; }
+      .gooey-animation { animation: gooey-slide-in 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+      /* Ripple effect */
+      .ripple {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .ripple:after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+        background-repeat: no-repeat;
+        background-position: 50%;
+        transform: scale(10, 10);
+        opacity: 0;
+        transition: transform 0.5s, opacity 1s;
+      }
+
+      .ripple:active:after {
+        transform: scale(0, 0);
+        opacity: 0.3;
+        transition: 0s;
+      }
+
+      /* Checkmark */
+      .checkmark {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        stroke-width: 2;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-dasharray: 24;
+        animation: checkmark 0.4s ease-in-out forwards;
+      }
+
+      /* Tooltip */
+      .tooltip {
+        position: relative;
+      }
+
+      .tooltip:before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) scale(0);
+        padding: 4px 8px;
+        background: #333;
+        color: white;
+        border-radius: 4px;
+        font-size: 12px;
+        opacity: 0;
+        transition: all 0.2s;
+      }
+
+      .tooltip:hover:before {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+      }
+    </style>
+  </head>
+
+  <body class="flex flex-col items-center bg-slate-50">
+    <!-- SVG Filters -->
+    <svg class="absolute w-0 h-0" aria-hidden="true">
+      <defs>
+        <filter id="gooey">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+          <feColorMatrix
+            in="blur"
+            mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9"
+            result="gooey"
+          />
+          <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- Navigation -->
+    <nav class="w-full bg-white shadow-sm">
+      <div class="container mx-auto px-4">
+        <a href="/" class="inline-block py-4 text-xl font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
+          μ URL
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8 max-w-3xl">
+      <section class="flex flex-col gap-5 mt-4 md:mt-32">
+        <!-- Hero -->
+        <h1 class="text-3xl md:text-6xl text-center font-extrabold text-slate-900">
+          Turn Big Links
+          <span class="underline decoration-emerald-500">micro</span>
+        </h1>
+        <p class="text-center text-lg text-slate-600">
+          Shorten your links with μ-url and share them with ease.
+        </p>
+
+        <!-- URL Form -->
+        <div class="relative flex items-center mt-6">
+          <span class="absolute p-5">
+            <svg
+              width="26"
+              height="20"
+              viewBox="0 0 26 19"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M23.5859 9.5L18.7031 14.3828C16.75 16.3359 13.5859 16.3359 11.6719 14.3828C9.79688 12.5078 9.67969 9.53906 11.3984 7.58594L11.6328 7.35156C11.8281 7.07812 12.2578 7.03906 12.4922 7.27344C12.7656 7.50781 12.8047 7.89844 12.5703 8.17188L12.375 8.40625C11.0859 9.89062 11.1641 12.1172 12.5312 13.4844C14.0156 14.9688 16.3594 14.9688 17.8438 13.4844L22.6875 8.64062C24.1719 7.15625 24.1719 4.8125 22.6875 3.32812C21.2422 1.88281 18.8594 1.88281 17.4141 3.32812L16.5156 4.22656C16.2812 4.46094 15.8906 4.46094 15.6172 4.22656C15.3828 3.95312 15.3828 3.5625 15.6172 3.32812L16.5156 2.42969C18.4688 0.476562 21.6328 0.476562 23.5859 2.42969C25.5391 4.38281 25.5391 7.54688 23.5859 9.5ZM2.375 9.5L7.25781 4.65625C9.21094 2.70312 12.3359 2.70312 14.3281 4.65625C16.1641 6.49219 16.2812 9.46094 14.5625 11.4531L14.3281 11.6875C14.1328 11.9609 13.7422 12 13.4688 11.7656C13.1953 11.5312 13.1562 11.1406 13.3906 10.8672L13.625 10.6328C14.875 9.14844 14.7969 6.92188 13.4297 5.55469C11.9453 4.07031 9.60156 4.07031 8.11719 5.55469L3.27344 10.3984C1.78906 11.8828 1.78906 14.2266 3.27344 15.7109C4.71875 17.1562 7.10156 17.1562 8.54688 15.7109L9.44531 14.8125C9.67969 14.5781 10.0703 14.5781 10.3438 14.8125C10.5781 15.0469 10.5781 15.4766 10.3438 15.7109L9.44531 16.5703C7.49219 18.5234 4.32812 18.5234 2.375 16.5703C0.421875 14.6172 0.421875 11.4531 2.375 9.5Z"
+                fill="#C9CED6"
+              />
+            </svg>
+          </span>
+          <form
+            class="w-full"
+            hx-post="/shorten"
+            hx-target="#results"
+            hx-swap="innerHTML show:top"
+            x-data="{ loading: false }"
+            @htmx:before-request="loading = true"
+            @htmx:after-request="loading = false"
+          >
+            <input
+              name="url"
+              type="text"
+              placeholder="Enter your link here"
+              required
+              class="input pl-14 h-[58px] rounded-full w-full input-bordered focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              :disabled="loading"
+            />
+            <button
+              type="submit"
+              class="btn mt-1 bg-emerald-600 font-semibold rounded-[48px] absolute text-white right-1 hover:bg-emerald-700 transition-colors"
+              :disabled="loading"
+            >
+              <template x-if="loading">
+                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </template>
+              <template x-if="!loading">
+                <span>Convert</span>
+              </template>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Results -->
+      <section id="results" class="gooey-wrapper mt-8"></section>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+      window.copyText = function () {
+        const urlElement = document.getElementById("url");
+        const copyButton = document.querySelector("[data-copy]");
+
+        if (urlElement && copyButton) {
+          navigator.clipboard.writeText(urlElement.textContent)
+            .then(() => {
+              copyButton.classList.add("bg-emerald-500", "text-white");
+              setTimeout(() => {
+                copyButton.classList.remove("bg-emerald-500", "text-white");
+              }, 2000);
+            })
+            .catch(err => {
+              console.error('Failed to copy:', err);
+              alert('Failed to copy URL. Please try again.');
+            });
+        }
+      };
+    </script>
+  </body>
+</html>
